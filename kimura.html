@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TROC PET検査リアルタイム運営システム 完成版</title>
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --bg-panel: #1e293b;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-light: #f8fafc;
+    --border-color: #cbd5e1;
+
+    /* 3部門の明確な視覚分類カラー */
+    --dept-concierge-bg: #1d4ed8;
+    --dept-concierge-sub: #2563eb;
+    --dept-concierge-light: #dbeafe;
+    --dept-concierge-border: #1d4ed8;
+
+    --dept-nurse-bg: #be185d;
+    --dept-nurse-sub: #db2777;
+    --dept-nurse-light: #ffe4e6;
+    --dept-nurse-border: #e11d48;
+
+    --dept-tech-bg: #6d28d9;
+    --dept-tech-sub: #7c3aed;
+    --dept-tech-light: #ede9fe;
+    --dept-tech-border: #7c3aed;
+
+    /* ✅ 終了した検査項目：鮮やかなライム・エメラルドグリーン */
+    --step-done-bg: #86efac;
+    --step-done-border: #15803d;
+    --step-done-text: #064e3b;
+
+    /* ▶ 実施中の検査項目：アンバーイエロー */
+    --step-active-bg: #fef08a;
+    --step-active-border: #d97706;
+
+    /* ⬛ リスケ/空き枠 ブラックアウト */
+    --blackout-bg: #0f172a;
+    --blackout-cell: #1e293b;
+    --blackout-text: #64748b;
+
+    /* 検査工程別の色分け（運営ボード・KPI用） */
+    --c-unarrived: #f8fafc;   --b-unarrived: #94a3b8;
+    --c-recep: #dbeafe;       --b-recep: #2563eb;
+    --c-interview: #ffe4e6;   --b-interview: #e11d48;
+    --c-fdg: #fce7f3;         --b-fdg: #be185d;
+    --c-wait: #fef9c3;        --b-wait: #ca8a04;
+    --c-brestome: #ffedd5;    --b-brestome: #ea580c;
+    --c-move: #f5ebe6;        --b-move: #854d0e;
+    --c-petct: #ede9fe;       --b-petct: #7c3aed;
+    --c-dressing: #e0f2fe;    --b-dressing: #0284c7;
+    --c-done: #86efac;        --b-done: #15803d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Yu Gothic", "游ゴシック", YuGothic, "Meiryo", sans-serif;
+    background-color: #f1f5f9;
+    color: var(--text-main);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* トップヘッダー */
+  header {
+    background: var(--bg-dark);
+    color: var(--text-light);
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #334155;
+    flex-shrink: 0;
+  }
+  .brand-area { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  .brand-title { font-size: 16px; font-weight: bold; color: #38bdf8; white-space: nowrap; }
+  .clock-box {
+    background: #020617;
+    border: 1px solid #38bdf8;
+    border-radius: 6px;
+    padding: 3px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .clock-time { font-size: 16px; font-weight: bold; color: #fde047; font-variant-numeric: tabular-nums; }
+  .nav-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+  .tab-btn {
+    background: #334155;
+    color: #e2e8f0;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { background: #475569; }
+  .tab-btn.active { background: #0284c7; color: #fff; box-shadow: 0 0 8px rgba(56,189,248,0.4); }
+
+  /* KPIピル＆アラートバー */
+  .sub-header-bar {
+    background: #1e293b;
+    color: #fff;
+    padding: 5px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 2px solid #0f172a;
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .kpi-strip { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+  .kpi-pill {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+  .kpi-pill.active-filter { border-color: #fde047; box-shadow: 0 0 6px #fde047; }
+  .kpi-val { font-size: 12px; font-weight: 900; }
+
+  .alert-right { display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0; }
+  .alert-items { display: flex; gap: 6px; align-items: center; }
+  .alert-badge { padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+  .alert-yellow { background: #fef08a; color: #713f12; }
+  .alert-red { background: #fecaca; color: #7f1d1d; }
+  .alert-ok { background: #dcfce7; color: #14532d; }
+
+  main { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 8px 12px; }
+  .sheet-view { display: none; height: 100%; width: 100%; overflow: hidden; }
+  .sheet-view.active { display: flex; flex-direction: column; gap: 8px; }
+
+  /* ====== シート② PET運営ボード ====== */
+  .board-layout { display: grid; grid-template-columns: 1fr 300px; gap: 10px; height: 100%; overflow: hidden; }
+  .cards-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 6px; height: 100%; }
+  .slot-card {
+    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-card);
+    padding: 5px 7px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .slot-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+  .slot-card.card-blackout {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 2px; }
+  .slot-num { font-size: 13px; font-weight: 900; }
+  .attr-badge { font-size: 10px; font-weight: bold; padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,0.88); border: 1px solid rgba(0,0,0,0.2); color: #0f172a; }
+  .card-status-row { display: flex; justify-content: space-between; align-items: center; margin: 1px 0; }
+  .status-label { font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 4px; color: #fff; display: inline-block; }
+  .delay-chip { font-size: 10px; font-weight: bold; padding: 1px 4px; border-radius: 3px; }
+  .card-times { font-size: 10px; line-height: 1.25; background: rgba(255,255,255,0.85); border-radius: 4px; padding: 3px 5px; font-variant-numeric: tabular-nums; color: #0f172a; }
+  .card-times div { display: flex; justify-content: space-between; gap: 4px; white-space: nowrap; }
+  .done-text { color: #15803d; font-weight: bold; background: #dcfce7; padding: 0 2px; border-radius: 2px; }
+  .step-dots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin: 2px 0; }
+  .step-dot { height: 6px; border-radius: 2px; background: #e2e8f0; border: 1px solid rgba(0,0,0,0.15); }
+  .card-footer { display: flex; justify-content: flex-start; gap: 4px; font-size: 10px; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .side-panel { display: flex; flex-direction: column; gap: 8px; height: 100%; overflow: hidden; }
+  .panel-box { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .panel-title { font-size: 12px; font-weight: bold; border-left: 4px solid #0284c7; padding-left: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .wait-rooms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .room-card { border: 2px solid #cbd5e1; border-radius: 6px; padding: 5px; font-size: 11px; background: #f8fafc; }
+  .room-card.active-room { background: #dcfce7; border-color: #16a34a; }
+  .equip-card { border: 2px solid #cbd5e1; border-radius: 6px; padding: 6px; font-size: 11px; background: #f8fafc; }
+  .equip-card.running-brestome { background: var(--c-brestome); border-color: var(--b-brestome); }
+  .equip-card.running-petct { background: var(--c-petct); border-color: var(--b-petct); }
+
+  /* ====== シート① 全工程・統合入力シート ====== */
+  .dept-legend-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    flex-shrink: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .dept-badges { display: flex; gap: 8px; align-items: center; font-size: 11px; font-weight: bold; flex-wrap: wrap; }
+  .dept-pill { padding: 4px 10px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+
+  .table-wrap { flex: 1; overflow: auto; background: #fff; border: 1px solid #94a3b8; border-radius: 6px; position: relative; }
+  
+  /* テーブルとリサイザー（列幅調整）の設定 */
+  table.sched-table { 
+    width: 100%; 
+    border-collapse: separate; 
+    border-spacing: 0;
+    font-size: 11px; 
+    font-variant-numeric: tabular-nums; 
+  }
+  table.sched-table th, table.sched-table td {
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+    padding: 3px 4px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    position: relative;
+  }
+  table.sched-table th { border-top: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; }
+  table.sched-table td { border-left: 1px solid #cbd5e1; }
+
+  /* 3段固定ヘッダー */
+  table.sched-table thead tr.h-row-1 th { position: sticky; top: 0; height: 26px; z-index: 15; color: #fff; font-size: 11px; }
+  table.sched-table thead tr.h-row-2 th { position: sticky; top: 26px; height: 24px; z-index: 14; color: #fff; font-size: 11px; }
+  table.sched-table thead tr.h-row-3 th { position: sticky; top: 50px; height: 24px; z-index: 13; background: #f1f5f9; color: #0f172a; font-size: 10px; border-bottom: 2px solid #475569; }
+
+  /* リサイザー */
+  .col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 20;
+    background-color: transparent;
+  }
+  .col-resizer:hover, .col-resizer.resizing {
+    background-color: #38bdf8;
+    opacity: 0.6;
+  }
+
+  /* 3部門別の列背景と境界線（未完了時） */
+  .col-concierge { background-color: var(--dept-concierge-light); }
+  .col-nurse     { background-color: var(--dept-nurse-light); }
+  .col-tech      { background-color: var(--dept-tech-light); }
+  .dept-divider-left { border-left: 2.5px solid #1e293b !important; }
+
+  /* ★ 終了した検査項目 */
+  td.step-done-cell {
+    background-color: var(--step-done-bg) !important;
+    color: var(--step-done-text) !important;
+    border-color: #16a34a !important;
+    font-weight: bold;
+  }
+  /* ▶ 現在実施中の検査項目 */
+  td.step-active-cell {
+    background-color: var(--step-active-bg) !important;
+    box-shadow: inset 0 0 0 2px var(--step-active-border);
+    color: #78350f !important;
+  }
+
+  /* ⬛ リスケ/空き枠 ブラックアウト */
+  tr.row-blackout td {
+    background-color: var(--blackout-bg) !important;
+    color: var(--blackout-text) !important;
+    border-color: #334155 !important;
+  }
+  tr.row-blackout select { background-color: #334155; color: #f8fafc; border: 1px solid #94a3b8; font-weight: bold; border-radius: 3px; }
+  tr.row-blackout .note-full-input { background-color: #1e293b !important; color: #94a3b8 !important; border-color: #334155 !important; }
+  tr.row-blackout .input-stamp-wrap, tr.row-blackout .blackout-hide { opacity: 0.18; pointer-events: none; }
+
+  .step-state-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 9px; font-weight: 900; padding: 1px 6px; border-radius: 999px; line-height: 1.2; }
+  .badge-done { background: #15803d; color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .badge-active { background: #d97706; color: #ffffff; animation: pulse-badge 1.4s infinite; }
+  .badge-wait { background: rgba(255,255,255,0.75); color: #475569; border: 1px solid #cbd5e1; }
+  @keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
+
+  /* 時刻入力＋打刻ボタン */
+  .input-stamp-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .input-stamp-row { display: inline-flex; align-items: center; gap: 2px; }
+  .time-input { width: 74px; height: 22px; font-size: 11px; padding: 0 2px; border-radius: 3px; font-family: inherit; text-align: center; font-weight: bold; background: #fff; }
+  .time-input.done-input { background: #dcfce7; border: 2px solid #15803d !important; color: #064e3b; }
+  .time-input::-webkit-calendar-picker-indicator { margin-left: 0; padding: 0; width: 12px; cursor: pointer; }
+  .input-concierge { border: 1.5px solid var(--dept-concierge-border); }
+  .input-nurse     { border: 1.5px solid var(--dept-nurse-border); }
+  .input-tech      { border: 1.5px solid var(--dept-tech-border); }
+
+  .stamp-mini { color: #fff; border: none; border-radius: 3px; padding: 0 5px; height: 22px; font-size: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .btn-concierge { background: var(--dept-concierge-border); }
+  .btn-nurse     { background: var(--dept-nurse-border); }
+  .btn-tech      { background: var(--dept-tech-border); }
+  .btn-done      { background: #15803d; }
+
+  .auto-link-sub { font-size: 9px; line-height: 1; font-weight: bold; }
+
+  /* 備考欄（当日情報・枠いっぱい） */
+  th.note-col-header { width: 100%; min-width: 240px; }
+  td.note-cell { width: 100%; min-width: 240px; padding: 2px !important; background: #ffffff; }
+  .note-full-input { width: 100%; height: 40px; display: block; box-sizing: border-box; font-family: inherit; font-size: 11px; padding: 3px 6px; border: 1.5px solid #64748b; border-radius: 4px; background: #f8fafc; color: #0f172a; resize: vertical; }
+  .note-full-input:focus { background: #ffffff; border-color: #0284c7; outline: none; }
+
+  .admin-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; height: 100%; overflow: auto; }
+  .master-input { width: 58px; padding: 3px; text-align: center; font-weight: bold; border: 2px solid #0284c7; border-radius: 4px; }
+
+  /* モーダル */
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 100; align-items: center; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal-content { background: #fff; border-radius: 8px; width: 760px; max-width: 96vw; padding: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+  .dept-modal-section { border: 2px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+  .dept-modal-header { font-size: 12px; font-weight: bold; color: #fff; padding: 3px 8px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
+  .modal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .step-box { border: 2px solid #cbd5e1; border-radius: 5px; padding: 6px; font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-area">
+    <div class="brand-title">🏥 TROC PET検査リアルタイム運営システム</div>
+    <div class="clock-box">
+      <span>現在時刻:</span>
+      <span id="liveClock" class="clock-time">--:--:--</span>
+      <label style="font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
+        <input type="checkbox" id="simModeToggle" onchange="toggleSimMode()"> 検証時刻固定
+      </label>
+      <input type="time" id="simTimeInput" value="10:35" style="display:none; font-size:11px;" onchange="recalcAll()">
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('input', this)">① 全工程・統合入力シート</button>
+    <button class="tab-btn" onclick="switchTab('board', this)">② PET運営ボード</button>
+    <button class="tab-btn" onclick="switchTab('admin', this)">③ 管理者画面</button>
+    <button class="tab-btn" onclick="switchTab('master', this)">④ 内訳時間設定・薬剤計算</button>
+  </div>
+</header>
+
+<div class="sub-header-bar">
+  <div class="kpi-strip" id="kpiStrip"></div>
+  <div class="alert-right">
+    <div class="alert-items" id="alertContainer"></div>
+    <div style="font-size:11px; color:#cbd5e1;">
+      最終患者完了予測: <strong id="finalEndPred" style="color:#fde047; font-size:13px;">--:--</strong>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- シート① 全工程・統合入力シート -->
+  <section id="sheet-input" class="sheet-view active">
+    <div class="dept-legend-bar">
+      <div class="dept-badges">
+        <span>【部門・ステータス別カラー分類】</span>
+        <span class="dept-pill" style="background:var(--dept-concierge-bg);">🧑‍💼 コンシェルジュ（①受付・⑧更衣終了）</span>
+        <span class="dept-pill" style="background:var(--dept-nurse-bg);">👩‍⚕️ 看護師（②問診・③FDG）</span>
+        <span class="dept-pill" style="background:var(--dept-tech-bg);">🧑‍🔬 技師（⑤BresTome・⑦全身PET/CT）</span>
+        <span class="dept-pill" style="background:#15803d; border:2px solid #86efac;">✅ 終了項目（グリーン）</span>
+        <span class="dept-pill" style="background:#0f172a; border:1px solid #64748b;">⬛ リスケ/空き枠</span>
+      </div>
+      <div style="font-size:11px; color:#334155; font-weight:bold;">
+        ※各見出し行の右端をドラッグすると列幅を調整できます。
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="sched-table" id="schedTable"></table>
+    </div>
+  </section>
+
+  <!-- シート② PET運営ボード -->
+  <section id="sheet-board" class="sheet-view">
+    <div class="board-layout">
+      <div class="cards-grid" id="cardsGrid"></div>
+      <div class="side-panel">
+        <div class="panel-box">
+          <div class="panel-title">
+            <span>🛋️ 待機室管理（最大4部屋）</span>
+            <span id="waitRoomSummary" style="font-size:11px;">0 / 4 室使用中</span>
+          </div>
+          <div class="wait-rooms-grid" id="waitRoomsGrid"></div>
+        </div>
+        <div class="panel-box">
+          <div class="panel-title"><span>☢️ 装置稼働状況（リアルタイム連動）</span></div>
+          <div id="equipContainer" style="display:flex; flex-direction:column; gap:6px;"></div>
+        </div>
+        <div class="panel-box" style="flex:1; overflow:auto;">
+          <div class="panel-title"><span>🎨 検査工程の色分け凡例（原本順）</span></div>
+          <div id="legendList" style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:11px;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- シート③ 管理者画面 -->
+  <section id="sheet-admin" class="sheet-view">
+    <div class="admin-grid">
+      <div class="panel-box" style="overflow:auto;">
+        <div class="panel-title"><span>⚠️ 遅延管理＆FDG予定・待機調整一覧</span></div>
+        <table class="sched-table" id="delayAdminTable"></table>
+      </div>
+      <div class="panel-box" style="overflow:auto;">
+        <div class="panel-title"><span>📊 稼働率分析・工程別設定時間</span></div>
+        <div id="adminMetricsBox" style="display:flex; flex-direction:column; gap:8px; font-size:12px;"></div>
+      </div>
+      <div class="panel-box" style="overflow:auto;">
+        <div class="panel-title">
+          <span>📝 日報自動生成（Outlook游ゴシック11pt対応）</span>
+          <!-- alert()の代わりとして、引数にthisを渡してボタン文字を変更する仕様に変更 -->
+          <button class="stamp-mini btn-concierge" style="padding:2px 8px;" onclick="copyDailyReport(this)">全文コピー</button>
+        </div>
+        <textarea id="dailyReportArea" readonly style="width:100%; flex:1; font-family:'Yu Gothic',sans-serif; font-size:11pt; color:#000; padding:8px; border:1px solid #cbd5e1; border-radius:4px; resize:none;"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- シート④ 内訳マスタ＆薬剤計算 -->
+  <section id="sheet-master" class="sheet-view">
+    <div class="admin-grid" style="grid-template-columns: 1.3fr 1fr;">
+      <div class="panel-box" style="overflow:auto;">
+        <div class="panel-title">
+          <span>⚙️ 『内訳』属性別 各工程所要時間マスタ（分）― 変更すると全18枠へ即時反映</span>
+          <button class="stamp-mini btn-concierge" style="padding:2px 8px;" onclick="resetMasterDurations()">初期値(問診20分)に戻す</button>
+        </div>
+        <table class="sched-table" id="masterDurationTable" style="margin-top:6px;"></table>
+      </div>
+      <div class="panel-box" style="overflow:auto;">
+        <div class="panel-title"><span>🧪 FDG分注容量＆未来減衰シミュレーター（半減期 109.77分）</span></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
+          <label>検定時総放射能 (MBq): <input type="number" id="fdgTotalMbq" value="185" class="master-input" onchange="calcFdgSim()"></label>
+          <label>検定時総液量 (mL): <input type="number" id="fdgTotalMl" value="5" class="master-input" onchange="calcFdgSim()"></label>
+          <label>検定基準時刻: <input type="time" id="fdgBaseTime" value="09:00" class="master-input" style="width:90px;" onchange="calcFdgSim()"></label>
+          <label>使用予定時刻: <input type="time" id="fdgUseTime" value="11:00" class="master-input" style="width:90px;" onchange="calcFdgSim()"></label>
+          <label>必要放射能量 (MBq): <input type="number" id="fdgReqMbq" value="5" class="master-input" onchange="calcFdgSim()"></label>
+          <label>減衰目標量 (MBq): <input type="number" id="fdgTargetMbq" value="20" class="master-input" onchange="calcFdgSim()"></label>
+        </div>
+        <div id="fdgSimResult" style="margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; line-height:1.7;"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ワンタップ打刻モーダル -->
+<div class="modal-backdrop" id="slotModal">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:8px;">
+      <strong id="modalTitle" style="font-size:15px;">枠詳細・3部門打刻</strong>
+      <button class="tab-btn" onclick="closeModal()">閉じる ✕</button>
+    </div>
+    <div id="modalBody" style="margin-top:10px; font-size:12px;"></div>
+  </div>
+</div>
+
+<!-- Firebase連携用スクリプト -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+const STEPS_META = [
+  { key: 'unarrived', label: '未到着',           bg: '#f8fafc', border: '#94a3b8', badge: '#64748b', dept: '🧑‍💼コンシェルジュ' },
+  { key: 'recep',     label: '受付/更衣/説明',   bg: '#dbeafe', border: '#2563eb', badge: '#1d4ed8', dept: '🧑‍💼コンシェルジュ' },
+  { key: 'interview', label: '問診',             bg: '#ffe4e6', border: '#e11d48', badge: '#be185d', dept: '👩‍⚕️看護師' },
+  { key: 'fdg',       label: 'FDG投与・採血',    bg: '#fce7f3', border: '#db2777', badge: '#9d174d', dept: '👩‍⚕️看護師' },
+  { key: 'wait',      label: '待機室',           bg: '#fef9c3', border: '#ca8a04', badge: '#a16207', dept: '👩‍⚕️看護師' },
+  { key: 'brestome',  label: '乳房/脳PET',       bg: '#ffedd5', border: '#ea580c', badge: '#c2410c', dept: '🧑‍🔬技師' },
+  { key: 'move',      label: '部屋移動',         bg: '#f5ebe6', border: '#854d0e', badge: '#713f12', dept: '🧑‍🔬技師' },
+  { key: 'petct',     label: '全身PET/CT',       bg: '#ede9fe', border: '#7c3aed', badge: '#6d28d9', dept: '🧑‍🔬技師' },
+  { key: 'dressing',  label: '更衣・受付(終了)', bg: '#e0f2fe', border: '#0284c7', badge: '#0369a1', dept: '🧑‍💼コンシェルジュ' },
+  { key: 'done',      label: '完了',             bg: '#86efac', border: '#15803d', badge: '#15803d', dept: '✅完了' },
+  { key: 'blackout',  label: 'リスケ/空き枠',    bg: '#0f172a', border: '#334155', badge: '#0f172a', dept: '⬛空き枠' }
+];
+
+const DEFAULT_MASTER = {
+  '50↓男性': { recep: 20, interview: 20, fdg: 20, wait: 60, brain: 0,  breast: 0,  move: 0, petct: 17, dressing: 10, delayBuffer: 0 },
+  '50↑男性': { recep: 20, interview: 20, fdg: 20, wait: 50, brain: 10, breast: 0,  move: 5, petct: 17, dressing: 10, delayBuffer: 10 },
+  '50↓女性': { recep: 20, interview: 20, fdg: 20, wait: 45, brain: 0,  breast: 15, move: 5, petct: 15, dressing: 10, delayBuffer: 15 },
+  '50↑女性': { recep: 20, interview: 20, fdg: 20, wait: 30, brain: 10, breast: 20, move: 5, petct: 15, dressing: 10, delayBuffer: 30 },
+  'リスケ/空き枠': { recep: 0, interview: 0, fdg: 0, wait: 0, brain: 0, breast: 0, move: 0, petct: 0, dressing: 0, delayBuffer: 0 }
+};
+let masterDurations = JSON.parse(JSON.stringify(DEFAULT_MASTER));
+
+const STAFF_CON = ['受付Aさん', '受付Bさん'];
+const STAFF_NS  = ['安里さん', '清水さん', '北垣さん', '橋本さん'];
+const STAFF_RT  = ['木村さん', '荒木さん', '吉田さん', '藤村さん'];
+
+const SLOTS_DATA = [];
+const fixedRecepStarts = [
+  "07:50","08:20","08:50","09:20","09:50","10:20",
+  "10:50","11:20","11:50","12:20","12:50","13:20",
+  "13:50","14:20","14:50","15:20","15:50","16:20"
+];
+const fixedWaitPlans = [
+  "08:50","09:20","09:50","10:20","10:50","11:20",
+  "11:50","12:20","12:50","13:20","13:50","14:20",
+  "14:50","15:20","16:20","17:20","18:20","19:20"
+];
+
+for (let i = 0; i < 18; i++) {
+  const rFixed = fixedRecepStarts[i];
+  SLOTS_DATA.push({
+    slot: i + 1,
+    attr: '50↑女性',
+    note: '',
+    conStaff: STAFF_CON[i % STAFF_CON.length],
+    nsStaff: STAFF_NS[i % STAFF_NS.length],
+    rtStaff: STAFF_RT[i % STAFF_RT.length],
+    fixedRecep: rFixed,
+    fixedInterview: addMinutes(rFixed, 20),
+    fixedFdg: addMinutes(rFixed, 60),
+    fixedWait: fixedWaitPlans[i],
+    fixedBrestome: addMinutes(rFixed, 90),
+    fixedPetct: addMinutes(rFixed, 125),
+    fixedEnd: addMinutes(rFixed, 185),
+    actualRecepStart: '',
+    manualInterviewStart: '',
+    manualFdgQ: '',
+    manualWaitStart: '',
+    manualBrestomeStart: '',
+    manualPetctStart: '',
+    manualDressingEnd: '',
+    isForceDone: false
+  });
+}
+
+let activeFilter = 'all';
+let currentModalSlot = null;
+
+// ==========================================
+// ▼▼▼ Firebase リアルタイム同期設定 ▼▼▼
+// ==========================================
+const firebaseConfig = {
+  apiKey: "ご自身のAPIキー",
+  authDomain: "ご自身のプロジェクトID.firebaseapp.com",
+  databaseURL: "https://ご自身のデータベースURL.firebaseio.com",
+  projectId: "ご自身のプロジェクトID",
+  storageBucket: "ご自身のプロジェクトID.appspot.com",
+  messagingSenderId: "ご自身の送信者ID",
+  appId: "ご自身のアプリID"
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+const slotsRef = db.ref('troc_slots');
+const masterRef = db.ref('troc_master');
+
+// 無限ループを防ぐためのフラグ
+let isRemoteUpdating = false;
+
+// 1. 他のPCが枠データ(SLOTS_DATA)を更新した時の受信処理
+slotsRef.on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    isRemoteUpdating = true;
+    for (let i = 0; i < data.length; i++) {
+      if (SLOTS_DATA[i] && data[i]) {
+        Object.assign(SLOTS_DATA[i], data[i]);
+      }
+    }
+    recalcAll();
+    isRemoteUpdating = false;
+  } else {
+    // データがない場合は初期データを送信
+    slotsRef.set(SLOTS_DATA);
+  }
+});
+
+// 2. 他のPCがマスタデータ(masterDurations)を更新した時の受信処理
+masterRef.on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    isRemoteUpdating = true;
+    masterDurations = data;
+    recalcAll();
+    isRemoteUpdating = false;
+  }
+});
+
+// クラウドへ変更を送信する共通関数
+function syncSlotToCloud(idx) {
+  if (isRemoteUpdating) return; // 自分が受信中の場合は送信しない
+  slotsRef.child(idx).set(SLOTS_DATA[idx]);
+}
+function syncMasterToCloud() {
+  if (isRemoteUpdating) return;
+  masterRef.set(masterDurations);
+}
+// ▲▲▲ Firebase リアルタイム同期設定 終了 ▲▲▲
+// ==========================================
+
+function toMin(tStr) {
+  if (!tStr || typeof tStr !== 'string' || !tStr.includes(':')) return null;
+  const [h, m] = tStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+function toTimeStr(mins) {
+  if (mins === null || mins === undefined || isNaN(mins)) return '';
+  const mNorm = ((Math.round(mins) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(mNorm / 60)).padStart(2,'0')}:${String(mNorm % 60).padStart(2,'0')}`;
+}
+function addMinutes(tStr, addM) {
+  const base = toMin(tStr);
+  return base === null ? '' : toTimeStr(base + addM);
+}
+function maxTimeStr(t1, t2) {
+  const m1 = toMin(t1), m2 = toMin(t2);
+  if (m1 === null) return t2 || '';
+  if (m2 === null) return t1 || '';
+  return m1 >= m2 ? t1 : t2;
+}
+function getNowMinutes() {
+  const simToggle = document.getElementById('simModeToggle');
+  if (simToggle && simToggle.checked) {
+    return toMin(document.getElementById('simTimeInput').value) ?? 635;
+  }
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function recalcAll() {
+  const nowMin = getNowMinutes();
+  for (let i = 0; i < SLOTS_DATA.length; i++) {
+    const s = SLOTS_DATA[i];
+    if (s.attr === 'リスケ/空き枠') {
+      s.calcRecepStart = '--:--';
+      s.calcRecepEnd = '--:--';
+      s.calcInterviewStart = '--:--';
+      s.calcInterviewEnd = '--:--';
+      s.calcFdgStart = '--:--';
+      s.calcFdgEnd = '--:--';
+      s.fdgDelayMin = 0;
+      s.calcWaitStart = '--:--';
+      s.calcWaitEnd = '--:--';
+      s.calcBrestomeStart = '--:--';
+      s.calcBrestomeEnd = '--:--';
+      s.calcPetctStart = '--:--';
+      s.calcPetctEnd = '--:--';
+      s.calcFdgPlanM = '--:--';
+      s.calcDressingStart = '--:--';
+      s.calcDressingEnd = '--:--';
+      s.totalDelayMin = 0;
+      s.currentStepKey = 'blackout';
+      s.stepStates = { recep: 'wait', interview: 'wait', fdg: 'wait', brestome: 'wait', petct: 'wait', dressing: 'wait' };
+      continue;
+    }
+
+    const d = masterDurations[s.attr] || DEFAULT_MASTER['50↑女性'];
+    const bresTotalDur = (d.brain || 0) + (d.breast || 0);
+
+    // ① 受付
+    s.calcRecepStart = s.actualRecepStart || s.fixedRecep;
+    s.calcRecepEnd = d.recep > 0 ? addMinutes(s.calcRecepStart, d.recep) : s.calcRecepStart;
+
+    // ② 問診
+    s.calcInterviewStart = s.manualInterviewStart || s.calcRecepEnd;
+    s.calcInterviewEnd = d.interview > 0 ? addMinutes(s.calcInterviewStart, d.interview) : s.calcInterviewStart;
+
+    // ③ FDG投与(Q列)
+    s.calcBloodStartP = s.calcInterviewEnd;
+    const autoFdgQ = d.fdg > 0 ? addMinutes(s.calcBloodStartP, d.fdg) : s.calcBloodStartP;
+    s.calcFdgEnd = s.manualFdgQ || autoFdgQ;
+    s.calcFdgStart = d.fdg > 0 ? addMinutes(s.calcFdgEnd, -d.fdg) : s.calcFdgEnd;
+    s.fdgDelayMin = (toMin(s.calcFdgEnd) ?? 0) - (toMin(s.fixedFdg) ?? 0);
+
+    // ④ 待機室
+    s.calcWaitStart = s.manualWaitStart || s.calcFdgEnd;
+    s.calcWaitEnd = d.wait > 0 ? addMinutes(s.calcWaitStart, d.wait) : s.calcWaitStart;
+
+    // ⑤ BresTome
+    let prevBresEnd = '';
+    for (let p = i - 1; p >= 0; p--) {
+      const prevSlot = SLOTS_DATA[p];
+      if (prevSlot.attr === 'リスケ/空き枠') continue;
+      const prevDur = (masterDurations[prevSlot.attr]?.brain || 0) + (masterDurations[prevSlot.attr]?.breast || 0);
+      if (prevDur > 0) { prevBresEnd = prevSlot.calcBrestomeEnd; break; }
+    }
+    const autoBresStart = prevBresEnd ? maxTimeStr(s.calcWaitEnd, prevBresEnd) : s.calcWaitEnd;
+    s.calcBrestomeStart = s.manualBrestomeStart || autoBresStart;
+    s.calcBrestomeEnd = addMinutes(s.calcBrestomeStart, bresTotalDur);
+
+    // ⑥ 移動
+    s.moveDur = d.move;
+    s.calcMoveStart = s.calcBrestomeEnd;
+    s.calcMoveEnd = addMinutes(s.calcBrestomeEnd, d.move);
+
+    // ⑦ 全身PET/CT
+    let prevPetctEnd = '';
+    for (let p = i - 1; p >= 0; p--) {
+      if (SLOTS_DATA[p].attr !== 'リスケ/空き枠') { prevPetctEnd = SLOTS_DATA[p].calcPetctEnd; break; }
+    }
+    const autoPetctStart = prevPetctEnd ? maxTimeStr(prevPetctEnd, s.calcMoveEnd) : s.calcMoveEnd;
+    s.calcPetctStart = s.manualPetctStart || autoPetctStart;
+    s.calcPetctEnd = addMinutes(s.calcPetctStart, d.petct);
+
+    // M列：FDG予定時間
+    const m1 = s.calcFdgEnd;
+    const m2 = addMinutes(s.calcBrestomeStart, -d.wait);
+    const m3 = addMinutes(s.calcPetctStart, -(bresTotalDur + d.wait + d.move));
+    s.calcFdgPlanM = maxTimeStr(m1, maxTimeStr(m2, m3));
+
+    // ⑧ 完了(AI列基準)
+    s.calcDressingStart = s.calcPetctEnd;
+    const autoDressingEnd = addMinutes(s.calcDressingStart, d.dressing);
+    s.calcDressingEnd = s.manualDressingEnd || autoDressingEnd;
+    s.totalDelayMin = (toMin(s.calcDressingEnd) ?? 0) - (toMin(s.fixedEnd) ?? 0);
+
+    s.currentStepKey = determineCurrentStep(s, nowMin, bresTotalDur);
+    s.stepStates = computeStepStates(s, nowMin, bresTotalDur);
+  }
+  renderAllViews();
+}
+
+function determineCurrentStep(s, nowMin, bresTotalDur) {
+  if (s.attr === 'リスケ/空き枠') return 'blackout';
+  if (s.isForceDone) return 'done';
+  if (!s.actualRecepStart) return 'unarrived';
+
+  if (nowMin < toMin(s.calcRecepStart))     return 'unarrived';
+  if (nowMin < toMin(s.calcInterviewStart)) return 'recep';
+  if (nowMin < toMin(s.calcFdgStart))       return 'interview';
+  if (nowMin < toMin(s.calcWaitStart))      return 'fdg';
+  if (nowMin < toMin(s.calcBrestomeStart))  return 'wait';
+  if (bresTotalDur > 0 && nowMin < toMin(s.calcMoveStart)) return 'brestome';
+  if (nowMin < toMin(s.calcPetctStart))     return 'move';
+  if (nowMin < toMin(s.calcDressingEnd))    return 'petct';
+  return 'done';
+}
+
+function computeStepStates(s, nowMin, bresTotalDur) {
+  const arrived = Boolean(s.actualRecepStart) && s.attr !== 'リスケ/空き枠';
+  if (!arrived) {
+    return { recep: 'wait', interview: 'wait', fdg: 'wait', brestome: 'wait', petct: 'wait', dressing: 'wait' };
+  }
+  if (s.isForceDone) {
+    return { recep: 'done', interview: 'done', fdg: 'done', brestome: 'done', petct: 'done', dressing: 'done' };
+  }
+  function stateOf(startStr, endStr) {
+    const st = toMin(startStr);
+    const ed = toMin(endStr);
+    if (nowMin >= ed) return 'done';
+    if (nowMin >= st && nowMin < ed) return 'active';
+    return 'wait';
+  }
+  return {
+    recep:     stateOf(s.calcRecepStart, s.calcRecepEnd),
+    interview: stateOf(s.calcInterviewStart, s.calcInterviewEnd),
+    fdg:       stateOf(s.calcFdgStart, s.calcFdgEnd),
+    brestome:  bresTotalDur > 0 ? stateOf(s.calcBrestomeStart, s.calcBrestomeEnd) : (nowMin >= toMin(s.calcBrestomeEnd) ? 'done' : 'wait'),
+    petct:     stateOf(s.calcPetctStart, s.calcPetctEnd),
+    dressing:  stateOf(s.calcDressingStart, s.calcDressingEnd)
+  };
+}
+
+function renderStateBadge(state, doneLabel = '✅ 終了', activeLabel = '▶ 実施中', waitLabel = '未実施') {
+  if (state === 'done')   return `<span class="step-state-badge badge-done">${doneLabel}</span>`;
+  if (state === 'active') return `<span class="step-state-badge badge-active">${activeLabel}</span>`;
+  return `<span class="step-state-badge badge-wait">${waitLabel}</span>`;
+}
+
+function cellStateClass(state, defaultDeptClass) {
+  if (state === 'done')   return `${defaultDeptClass} step-done-cell`;
+  if (state === 'active') return `${defaultDeptClass} step-active-cell`;
+  return defaultDeptClass;
+}
+
+function renderAllViews() {
+  renderKpiAndAlerts();
+  renderInputTable();
+  renderBoardView();
+  renderAdminView();
+  renderMasterTable();
+  calcFdgSim();
+}
+
+function renderKpiAndAlerts() {
+  const counts = {};
+  STEPS_META.forEach(st => counts[st.key] = 0);
+  let delay30 = 0, delay60 = 0;
+
+  SLOTS_DATA.forEach(s => {
+    counts[s.currentStepKey] = (counts[s.currentStepKey] || 0) + 1;
+    if (s.attr !== 'リスケ/空き枠') {
+      if (s.totalDelayMin >= 60) delay60++;
+      else if (s.totalDelayMin >= 30) delay30++;
+    }
+  });
+
+  let html = `<div class="kpi-pill ${activeFilter==='all'?'active-filter':''}" style="background:#e2e8f0;" onclick="setFilter('all')">全18枠</div>`;
+  STEPS_META.forEach(st => {
+    const textCol = st.key === 'blackout' ? '#f8fafc' : '#0f172a';
+    html += `<div class="kpi-pill ${activeFilter===st.key?'active-filter':''}" style="background:${st.bg}; border-color:${st.border}; color:${textCol};" onclick="setFilter('${st.key}')">
+      <span>${st.label}</span><span class="kpi-val">${counts[st.key]}</span>
+    </div>`;
+  });
+  document.getElementById('kpiStrip').innerHTML = html;
+
+  const alerts = [];
+  if (delay60 > 0) alerts.push(`<span class="alert-badge alert-red">🟥 60分以上遅延: ${delay60}名</span>`);
+  if (delay30 > 0) alerts.push(`<span class="alert-badge alert-yellow">🟨 30分以上遅延: ${delay30}名</span>`);
+  if (counts['wait'] >= 4) alerts.push(`<span class="alert-badge alert-red">🛋️ 待機室満室 (${counts['wait']}/4部屋)</span>`);
+  if (alerts.length === 0) alerts.push(`<span class="alert-badge alert-ok">🟢 現在、遅延・待機室超過アラートはありません</span>`);
+  document.getElementById('alertContainer').innerHTML = alerts.join('');
+
+  const lastActiveSlot = [...SLOTS_DATA].reverse().find(s => s.attr !== 'リスケ/空き枠');
+  document.getElementById('finalEndPred').textContent = lastActiveSlot?.calcDressingEnd || '--:--';
+}
+
+function renderInputTable() {
+  const tbl = document.getElementById('schedTable');
+
+  const thead = `
+    <thead>
+      <tr class="h-row-1">
+        <th colspan="3" style="background:#0f172a;">基本枠情報</th>
+        <th class="dept-divider-left note-col-header" style="background:#334155;">📝 備考欄 (全部門共有)</th>
+        <th colspan="2" class="dept-divider-left" style="background:var(--dept-concierge-bg);">🧑‍💼 コンシェルジュ（受付）</th>
+        <th colspan="2" class="dept-divider-left" style="background:var(--dept-nurse-bg);">👩‍⚕️ 看護師（問診）</th>
+        <th colspan="4" style="background:var(--dept-nurse-bg);">👩‍⚕️ 看護師（FDG投与）</th>
+        <th colspan="2" class="dept-divider-left" style="background:var(--dept-tech-bg);">🧑‍🔬 技師（BresTome）</th>
+        <th colspan="3" style="background:var(--dept-tech-bg);">🧑‍🔬 技師（全身PET/CT）</th>
+        <th colspan="3" class="dept-divider-left" style="background:var(--dept-concierge-bg);">🧑‍💼 コンシェルジュ（終了）</th>
+      </tr>
+      <tr class="h-row-2">
+        <th style="background:#334155;">枠</th>
+        <th style="background:#334155;">属性</th>
+        <th style="background:#334155;">現在工程</th>
+        <th class="dept-divider-left note-col-header" style="background:#475569;">当日情報</th>
+        <th colspan="2" class="dept-divider-left" style="background:var(--dept-concierge-sub);">受付</th>
+        <th colspan="2" class="dept-divider-left" style="background:var(--dept-nurse-sub);">問診</th>
+        <th style="background:#9d174d;">予定(M)</th>
+        <th colspan="2" style="background:var(--dept-nurse-sub);">投与・採血</th>
+        <th style="background:#9d174d;">遅延(R)</th>
+        <th colspan="2" class="dept-divider-left" style="background:var(--dept-tech-sub);">BresTome</th>
+        <th colspan="3" style="background:var(--dept-tech-sub);">全身PET/CT</th>
+        <th colspan="3" class="dept-divider-left" style="background:var(--dept-concierge-sub);">完了入力</th>
+      </tr>
+      <tr class="h-row-3">
+        <th>枠番</th>
+        <th>属性</th>
+        <th>ステータス</th>
+        <th class="dept-divider-left note-col-header">枠内いっぱいに入力</th>
+        <th class="dept-divider-left">定時</th>
+        <th>受付start</th>
+        <th class="dept-divider-left">定時</th>
+        <th>問診start</th>
+        <th style="background:#fbcfe8; color:#831843;">FDG予定🔗</th>
+        <th>定時</th>
+        <th>投与完了</th>
+        <th>遅延分</th>
+        <th class="dept-divider-left">定時</th>
+        <th>Bres start🔗</th>
+        <th>定時</th>
+        <th>PET start🔗</th>
+        <th>PET finish</th>
+        <th class="dept-divider-left" style="color:#0284c7;">完了入力🔗</th>
+        <th>定時</th>
+        <th>遅延</th>
+      </tr>
+    </thead>
+  `;
+
+  const tbody = '<tbody>' + SLOTS_DATA.map((s, idx) => {
+    const isBlackout = s.attr === 'リスケ/空き枠';
+    const meta = STEPS_META.find(m => m.key === s.currentStepKey) || STEPS_META[0];
+    const st = s.stepStates;
+
+    return `
+      <tr class="${isBlackout ? 'row-blackout' : ''}">
+        <td style="font-weight:900; background:${meta.bg};">${s.slot}</td>
+        <td style="background:${meta.bg};">
+          <select onchange="updateSlotAttr(${idx}, this.value)" style="font-size:11px; padding:2px; font-family:inherit;">
+            ${Object.keys(masterDurations).map(k => `<option value="${k}" ${s.attr===k?'selected':''}>${k}</option>`).join('')}
+          </select>
+        </td>
+        <td style="background:${meta.bg};">
+          <span class="status-label" style="background:${meta.badge}; border:${isBlackout?'1px solid #64748b':'none'};">${isBlackout ? '⬛ リスケ/空き枠' : meta.label}</span>
+        </td>
+
+        <td class="dept-divider-left note-cell">
+          <textarea class="note-full-input" onchange="updateSlotField(${idx}, 'note', this.value)"></textarea>
+        </td>
+
+        <td class="${cellStateClass(st.recep, 'col-concierge')} dept-divider-left">${s.fixedRecep}</td>
+        <td class="${cellStateClass(st.recep, 'col-concierge')}">
+          <div class="input-stamp-wrap">
+            ${renderStateBadge(st.recep, '✅ 受付終了', '▶ 受付中', '来院前')}
+            <div class="input-stamp-row">
+              <input type="time" class="time-input input-concierge ${st.recep==='done'?'done-input':''}" value="${s.actualRecepStart}" onchange="updateSlotField(${idx}, 'actualRecepStart', this.value)">
+              <button class="stamp-mini ${st.recep==='done'?'btn-done':'btn-concierge'}" onclick="stampNow(${idx}, 'actualRecepStart')">打刻</button>
+            </div>
+          </div>
+        </td>
+
+        <td class="${cellStateClass(st.interview, 'col-nurse')} dept-divider-left">${s.fixedInterview}</td>
+        <td class="${cellStateClass(st.interview, 'col-nurse')}">
+          <div class="input-stamp-wrap">
+            ${renderStateBadge(st.interview, '✅ 問診終了', '▶ 問診中', '待機')}
+            <div class="input-stamp-row">
+              <input type="time" class="time-input input-nurse ${st.interview==='done'?'done-input':''}" value="${s.manualInterviewStart}" onchange="updateSlotField(${idx}, 'manualInterviewStart', this.value)">
+              <button class="stamp-mini ${st.interview==='done'?'btn-done':'btn-nurse'}" onclick="stampNow(${idx}, 'manualInterviewStart')">打刻</button>
+            </div>
+            <span class="auto-link-sub" style="color:${st.interview==='done'?'#064e3b':'#9d174d'};">予定:${s.calcInterviewStart}</span>
+          </div>
+        </td>
+
+        <td class="${cellStateClass(st.fdg, 'col-nurse')}" style="font-weight:900; font-size:12px;" title="=MAX(Q, AA-U, AF-Z-U-AC)">
+          <span class="blackout-hide">${s.calcFdgPlanM}</span>
+        </td>
+        <td class="${cellStateClass(st.fdg, 'col-nurse')}">${s.fixedFdg}</td>
+        <td class="${cellStateClass(st.fdg, 'col-nurse')}">
+          <div class="input-stamp-wrap">
+            ${renderStateBadge(st.fdg, '✅ 投与終了', '▶ 投与中', '待機')}
+            <div class="input-stamp-row">
+              <input type="time" class="time-input input-nurse ${st.fdg==='done'?'done-input':''}" value="${s.manualFdgQ}" onchange="updateSlotField(${idx}, 'manualFdgQ', this.value)">
+              <button class="stamp-mini ${st.fdg==='done'?'btn-done':'btn-nurse'}" onclick="stampNow(${idx}, 'manualFdgQ')">打刻</button>
+            </div>
+            <span class="auto-link-sub" style="color:${st.fdg==='done'?'#064e3b':'#9d174d'};">連動:${s.calcFdgEnd}</span>
+          </div>
+        </td>
+        <td class="${cellStateClass(st.fdg, 'col-nurse')}" style="font-weight:bold;">
+          <span class="blackout-hide">${s.fdgDelayMin > 0 ? '+'+s.fdgDelayMin : s.fdgDelayMin}分</span>
+        </td>
+
+        <td class="${cellStateClass(st.brestome, 'col-tech')} dept-divider-left">${s.fixedBrestome}</td>
+        <td class="${cellStateClass(st.brestome, 'col-tech')}">
+          <div class="input-stamp-wrap">
+            ${renderStateBadge(st.brestome, '✅ 撮影終了', '▶ 撮影中', '待機')}
+            <div class="input-stamp-row">
+              <input type="time" class="time-input input-tech ${st.brestome==='done'?'done-input':''}" value="${s.manualBrestomeStart}" onchange="updateSlotField(${idx}, 'manualBrestomeStart', this.value)">
+              <button class="stamp-mini ${st.brestome==='done'?'btn-done':'btn-tech'}" onclick="stampNow(${idx}, 'manualBrestomeStart')">打刻</button>
+            </div>
+            <span class="auto-link-sub" style="color:${st.brestome==='done'?'#064e3b':'#5b21b6'};">連動:${s.calcBrestomeStart}</span>
+          </div>
+        </td>
+
+        <td class="${cellStateClass(st.petct, 'col-tech')}">${s.fixedPetct}</td>
+        <td class="${cellStateClass(st.petct, 'col-tech')}">
+          <div class="input-stamp-wrap">
+            ${renderStateBadge(st.petct, '✅ 撮影終了', '▶ 撮影中', '待機')}
+            <div class="input-stamp-row">
+              <input type="time" class="time-input input-tech ${st.petct==='done'?'done-input':''}" value="${s.manualPetctStart}" onchange="updateSlotField(${idx}, 'manualPetctStart', this.value)">
+              <button class="stamp-mini ${st.petct==='done'?'btn-done':'btn-tech'}" onclick="stampNow(${idx}, 'manualPetctStart')">打刻</button>
+            </div>
+            <span class="auto-link-sub" style="color:${st.petct==='done'?'#064e3b':'#5b21b6'};">連動:${s.calcPetctStart}</span>
+          </div>
+        </td>
+        <td class="${cellStateClass(st.petct, 'col-tech')}" style="font-weight:bold;">
+          <div class="blackout-hide">${s.calcPetctEnd}</div>
+        </td>
+
+        <td class="${cellStateClass(st.dressing, 'col-concierge')} dept-divider-left">
+          <div class="input-stamp-wrap">
+            ${renderStateBadge(st.dressing, '✅ 全検査完了', '▶ 完了入力待', '待機')}
+            <div class="input-stamp-row">
+              <input type="time" class="time-input input-concierge ${st.dressing==='done'?'done-input':''}" value="${s.manualDressingEnd}" onchange="updateSlotField(${idx}, 'manualDressingEnd', this.value)">
+              <button class="stamp-mini ${st.dressing==='done'?'btn-done':'btn-concierge'}" onclick="stampNow(${idx}, 'manualDressingEnd')">打刻</button>
+            </div>
+            <span class="auto-link-sub" style="color:${st.dressing==='done'?'#064e3b':'#1e40af'};">更衣開始:${s.calcDressingStart}</span>
+          </div>
+        </td>
+        <td class="${cellStateClass(st.dressing, 'col-concierge')}">${s.fixedEnd}</td>
+        <td class="${cellStateClass(st.dressing, 'col-concierge')}" style="font-weight:bold; background:${!isBlackout && s.totalDelayMin>=60?'#fecaca':(!isBlackout && s.totalDelayMin>=30?'#fef08a':'')};">
+          <span class="blackout-hide">${s.totalDelayMin > 0 ? '+'+s.totalDelayMin : s.totalDelayMin}分</span>
+        </td>
+      </tr>
+    `;
+  }).join('') + '</tbody>';
+
+  tbl.innerHTML = thead + tbody;
+  
+  const textareas = tbl.querySelectorAll('.note-full-input');
+  textareas.forEach((ta, idx) => { ta.value = SLOTS_DATA[idx].note; });
+
+  applyResizers();
+}
+
+function applyResizers() {
+  const table = document.getElementById('schedTable');
+  const cols = table.querySelectorAll('thead tr.h-row-3 th, thead tr.h-row-1 th.note-col-header');
+  cols.forEach(col => {
+    if(col.querySelector('.col-resizer')) return;
+    const resizer = document.createElement('div');
+    resizer.classList.add('col-resizer');
+    col.appendChild(resizer);
+    let x = 0; let w = 0;
+    const mouseDown = function (e) {
+      x = e.clientX;
+      w = parseInt(window.getComputedStyle(col).width, 10);
+      document.addEventListener('mousemove', mouseMove);
+      document.addEventListener('mouseup', mouseUp);
+      resizer.classList.add('resizing');
+    };
+    const mouseMove = function (e) {
+      col.style.width = `${w + (e.clientX - x)}px`;
+      col.style.minWidth = `${w + (e.clientX - x)}px`;
+    };
+    const mouseUp = function () {
+      resizer.classList.remove('resizing');
+      document.removeEventListener('mousemove', mouseMove);
+      document.removeEventListener('mouseup', mouseUp);
+    };
+    resizer.addEventListener('mousedown', mouseDown);
+  });
+}
+
+function renderBoardView() {
+  const grid = document.getElementById('cardsGrid');
+  const stepIndexMap = {};
+  STEPS_META.forEach((st, idx) => stepIndexMap[st.key] = idx);
+
+  grid.innerHTML = SLOTS_DATA.map(s => {
+    const isBlackout = s.attr === 'リスケ/空き枠';
+    const meta = STEPS_META.find(m => m.key === s.currentStepKey) || STEPS_META[0];
+    const isHidden = (activeFilter !== 'all' && activeFilter !== s.currentStepKey);
+    const curIdx = stepIndexMap[s.currentStepKey] || 0;
+    const st = s.stepStates;
+
+    if (isBlackout) {
+      return `
+        <div class="slot-card card-blackout" onclick="openSlotModal(${s.slot})" style="opacity:${isHidden ? 0.25 : 1};">
+          <div class="card-top" style="border-color:#334155;">
+            <span class="slot-num" style="color:#f8fafc;">枠 ${s.slot}</span>
+            <span class="attr-badge" style="background:#334155; color:#f8fafc;">⬛ リスケ/空き枠</span>
+          </div>
+          <div style="text-align:center; font-weight:bold; font-size:12px; color:#64748b; padding:18px 0;">
+            ⬛ リスケ / 空き枠
+          </div>
+          <div class="card-footer" style="color:#64748b;">
+            <span>定時枠: ${s.fixedRecep}〜</span>
+          </div>
+        </div>`;
+    }
+
+    let delayBadge = `<span class="delay-chip" style="background:#e2e8f0; color:#334155;">定刻±0</span>`;
+    if (s.totalDelayMin >= 60) delayBadge = `<span class="delay-chip" style="background:#dc2626; color:#fff;">+${s.totalDelayMin}分</span>`;
+    else if (s.totalDelayMin >= 30) delayBadge = `<span class="delay-chip" style="background:#eab308; color:#000;">+${s.totalDelayMin}分</span>`;
+    else if (s.totalDelayMin < 0) delayBadge = `<span class="delay-chip" style="background:#bbf7d0; color:#166534;">${s.totalDelayMin}分(早)</span>`;
+
+    const dotsHtml = STEPS_META.slice(1, 9).map((stepMeta, idx) => {
+      const color = (idx + 1) <= curIdx ? '#15803d' : '#e2e8f0';
+      return `<div class="step-dot" style="background:${color};" title="${stepMeta.label}"></div>`;
+    }).join('');
+
+    const ck = (state) => state === 'done' ? '✅' : (state === 'active' ? '▶' : '・');
+    const cls = (state) => state === 'done' ? 'done-text' : '';
+
+    return `
+      <div class="slot-card" onclick="openSlotModal(${s.slot})" style="background:${meta.bg}; border-color:${meta.border}; opacity:${isHidden ? 0.25 : 1};">
+        <div class="card-top">
+          <span class="slot-num">枠 ${s.slot}</span>
+          <span class="attr-badge">${meta.dept} | ${s.attr}</span>
+        </div>
+        <div class="card-status-row">
+          <span class="status-label" style="background:${meta.badge};">${meta.label}</span>
+          ${delayBadge}
+        </div>
+        <div class="card-times">
+          <div>
+            <span class="${cls(st.recep)}">${ck(st.recep)}受付:${s.calcRecepStart}</span>
+            <span class="${cls(st.interview)}">${ck(st.interview)}問診:${s.calcInterviewStart}</span>
+          </div>
+          <div>
+            <span style="color:#be185d; font-weight:bold;">FDG予定:${s.calcFdgPlanM}</span>
+            <span class="${cls(st.fdg)}">${ck(st.fdg)}投与:${s.calcFdgEnd}</span>
+          </div>
+          <div>
+            <span class="${cls(st.brestome)}">${ck(st.brestome)}Bres:${s.calcBrestomeStart}</span>
+            <span class="${cls(st.petct)}">${ck(st.petct)}PET:${s.calcPetctStart}〜${s.calcPetctEnd}</span>
+          </div>
+          <div style="font-weight:bold;">
+            <span class="${cls(st.dressing)}">${ck(st.dressing)}完了:${s.calcDressingEnd}</span>
+            <span>(定時${s.fixedEnd})</span>
+          </div>
+        </div>
+        <div class="step-dots">${dotsHtml}</div>
+        <div class="card-footer">
+          <span style="overflow:hidden; text-overflow:ellipsis; width:100%;">${s.note ? '📝 ' + s.note.replace(/\n/g, ' ') : ''}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  const waitingSlots = SLOTS_DATA.filter(s => s.currentStepKey === 'wait');
+  document.getElementById('waitRoomSummary').textContent = `${waitingSlots.length} / 4 室使用中`;
+  document.getElementById('waitRoomsGrid').innerHTML = [1, 2, 3, 4].map(rNum => {
+    const p = waitingSlots[rNum - 1];
+    return p ? `
+      <div class="room-card active-room">
+        <div style="font-weight:bold; display:flex; justify-content:space-between;"><span>待機室 ${['①','②','③','④'][rNum-1]}</span><span style="color:#15803d;">使用中</span></div>
+        <div style="margin-top:2px; font-weight:bold;">枠${p.slot} (${p.attr})</div>
+        <div style="font-size:10px;">${p.calcWaitStart} 〜 ${p.calcWaitEnd}</div>
+      </div>` : `
+      <div class="room-card">
+        <div style="font-weight:bold; display:flex; justify-content:space-between; color:#64748b;"><span>待機室 ${['①','②','③','④'][rNum-1]}</span><span>空室</span></div>
+        <div style="margin-top:2px; color:#94a3b8;">待機患者なし</div>
+      </div>`;
+  }).join('');
+
+  const bresActive = SLOTS_DATA.find(s => s.currentStepKey === 'brestome');
+  const petctActive = SLOTS_DATA.find(s => s.currentStepKey === 'petct');
+  document.getElementById('equipContainer').innerHTML = `
+    <div class="equip-card ${bresActive ? 'running-brestome' : ''}">
+      <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>🟠 BresTome</span><span>${bresActive ? '🟢 撮影中' : '⚪ 待機中'}</span></div>
+      <div style="margin-top:3px;">${bresActive ? `<strong>枠${bresActive.slot}</strong> [${bresActive.calcBrestomeStart}〜${bresActive.calcBrestomeEnd}]` : '現在撮影なし'}</div>
+    </div>
+    <div class="equip-card ${petctActive ? 'running-petct' : ''}">
+      <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>🟣 全身PET/CT</span><span>${petctActive ? '🟢 撮影中' : '⚪ 待機中'}</span></div>
+      <div style="margin-top:3px;">${petctActive ? `<strong>枠${petctActive.slot}</strong> [${petctActive.calcPetctStart}〜${petctActive.calcPetctEnd}]` : '現在撮影なし'}</div>
+    </div>`;
+
+  document.getElementById('legendList').innerHTML = STEPS_META.map((st, idx) => `
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 5px; background:${st.bg}; color:${st.key==='blackout'?'#fff':'#0f172a'}; border-left:4px solid ${st.border}; border-radius:3px;">
+      <span style="font-weight:bold;">${idx}. ${st.label}</span>
+      <span style="font-size:9px;">${st.dept}</span>
+    </div>`).join('');
+}
+
+function renderAdminView() {
+  const delayTbl = document.getElementById('delayAdminTable');
+  delayTbl.innerHTML = `
+    <thead>
+      <tr class="h-row-1">
+        <th style="background:#1e293b;">枠</th>
+        <th style="background:#1e293b;">属性</th>
+        <th style="background:#1e293b;">現在工程</th>
+        <th style="background:#1e293b;">FDG予定</th>
+        <th style="background:#1e293b;">投与完了</th>
+        <th style="background:#1e293b;">FDG遅延</th>
+        <th style="background:#1e293b;">最終完了</th>
+        <th style="background:#1e293b;">定時差</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${SLOTS_DATA.map(s => {
+        const isBlackout = s.attr === 'リスケ/空き枠';
+        const meta = STEPS_META.find(m => m.key === s.currentStepKey) || STEPS_META[0];
+        const rowBg = isBlackout ? '#0f172a' : (s.totalDelayMin >= 60 ? '#fee2e2' : (s.totalDelayMin >= 30 ? '#fef9c3' : '#fff'));
+        const rowCol = isBlackout ? '#64748b' : '#0f172a';
+        return `<tr style="background:${rowBg}; color:${rowCol};">
+          <td style="font-weight:bold;">枠${s.slot}</td>
+          <td>${s.attr}</td>
+          <td>${meta.label}</td>
+          <td style="font-weight:bold;">${s.calcFdgPlanM}</td>
+          <td>${s.calcFdgEnd}</td>
+          <td>${isBlackout ? '-' : s.fdgDelayMin + '分'}</td>
+          <td style="font-weight:bold;">${s.calcDressingEnd}</td>
+          <td style="font-weight:bold;">${isBlackout ? '-' : (s.totalDelayMin>0?'+'+s.totalDelayMin:s.totalDelayMin)+'分'}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>`;
+
+  const activeSlots = SLOTS_DATA.filter(s => s.attr !== 'リスケ/空き枠');
+  const doneCount = activeSlots.filter(s => s.currentStepKey === 'done').length;
+  const unarrivedCount = activeSlots.filter(s => s.currentStepKey === 'unarrived').length;
+  const inProgressCount = activeSlots.length - doneCount - unarrivedCount;
+  const maxDelay = activeSlots.length ? Math.max(...activeSlots.map(s => s.totalDelayMin)) : 0;
+  const sampleD = masterDurations['50↑女性'];
+
+  document.getElementById('adminMetricsBox').innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:6px;">
+      <div style="padding:8px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px;">有効予約数: <strong>${activeSlots.length}名</strong> (空枠:${18-activeSlots.length})</div>
+      <div style="padding:8px; background:#dcfce7; border:1px solid #16a34a; border-radius:4px;">完了数: <strong>${doneCount}名</strong></div>
+      <div style="padding:8px; background:#dbeafe; border:1px solid #2563eb; border-radius:4px;">進行中: <strong>${inProgressCount}名</strong></div>
+      <div style="padding:8px; background:#fee2e2; border:1px solid #dc2626; border-radius:4px;">最大遅延差: <strong>${maxDelay}分</strong></div>
+    </div>`;
+
+  const todayStr = new Date().toLocaleDateString('ja-JP');
+  document.getElementById('dailyReportArea').value =
+`件名：【TROC PET検査運営日報】${todayStr} 検査進捗・稼働報告
+
+村上院長、佐藤支配人、瀬嵐課長、森課長補佐、安里主任
+お疲れ様です。東京放射線クリニック 本日のPET検査運営状況をご報告いたします。
+
+■ 基本実績サマリー
+・本日有効枠数：${activeSlots.length}枠（完了：${doneCount}名 ／ 進行中：${inProgressCount}名 ／ 未到着：${unarrivedCount}名 ／ リスケ・空き枠：${18-activeSlots.length}枠）
+・最大遅延時間：${maxDelay}分
+
+■ 部門別連携状況
+・受付（${sampleD.recep}分）→ 問診（${sampleD.interview}分）→ FDG投与・採血（${sampleD.fdg}分）→ 待機 → 撮影まで3部門共通ボードにて連携稼働中です。`;
+}
+
+function renderMasterTable() {
+  const tbl = document.getElementById('masterDurationTable');
+  const attrs = ['50↓男性', '50↑男性', '50↓女性', '50↑女性'];
+  const rows = [
+    { key: 'recep',     label: '🧑‍💼 ① 受付/更衣/説明' },
+    { key: 'interview', label: '👩‍⚕️ ② 問診 ※20分統一' },
+    { key: 'fdg',       label: '👩‍⚕️ ③ FDG投与・採血' },
+    { key: 'wait',      label: '👩‍⚕️ ④ 待機時間' },
+    { key: 'brain',     label: '🧑‍🔬 ⑤-1 脳PET' },
+    { key: 'breast',    label: '🧑‍🔬 ⑤-2 乳房PET' },
+    { key: 'move',      label: '🧑‍🔬 ⑥ 部屋移動' },
+    { key: 'petct',     label: '🧑‍🔬 ⑦ 全身PET/CT' },
+    { key: 'dressing',  label: '🧑‍💼 ⑧ 更衣・受付終了' }
+  ];
+
+  let html = `<thead><tr class="h-row-1"><th style="background:#1e293b;">担当部門・工程項目</th>${attrs.map(a => `<th style="background:#1e293b;">${a}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr><td style="font-weight:bold; text-align:left;">${r.label}</td>`;
+    attrs.forEach(a => {
+      html += `<td><input type="number" min="0" max="120" class="master-input" value="${masterDurations[a][r.key]}" onchange="updateMasterDuration('${a}', '${r.key}', this.value)"> 分</td>`;
+    });
+    html += `</tr>`;
+  });
+  tbl.innerHTML = html + `</tbody>`;
+}
+
+// 変更箇所：Firebaseへ送信する処理を追加
+function updateMasterDuration(attr, key, val) {
+  masterDurations[attr][key] = Math.max(0, Number(val) || 0);
+  syncMasterToCloud();
+  recalcAll();
+}
+
+// 変更箇所：Firebaseへ送信する処理を追加
+function resetMasterDurations() {
+  masterDurations = JSON.parse(JSON.stringify(DEFAULT_MASTER));
+  syncMasterToCloud();
+  recalcAll();
+}
+
+function calcFdgSim() {
+  const totalMbq = Number(document.getElementById('fdgTotalMbq')?.value || 185);
+  const totalMl  = Number(document.getElementById('fdgTotalMl')?.value || 5);
+  const baseT    = toMin(document.getElementById('fdgBaseTime')?.value || '09:00') ?? 540;
+  const useT     = toMin(document.getElementById('fdgUseTime')?.value || '11:00') ?? 660;
+  const reqMbq   = Number(document.getElementById('fdgReqMbq')?.value || 5);
+  const diffMin  = useT - baseT;
+  const remainMbq = totalMbq * Math.pow(0.5, diffMin / 109.77);
+  const conc = remainMbq / totalMl;
+  const reqMl = reqMbq / conc;
+  const box = document.getElementById('fdgSimResult');
+  if (box) {
+    box.innerHTML = `
+      <div>・経過時間: <strong>${diffMin} 分</strong> ／ 想定残液量: <strong>${remainMbq.toFixed(2)} MBq</strong></div>
+      <div style="font-size:14px; color:#0284c7; margin-top:4px;">👉 <strong>必要シリンジ採取量: ${reqMl.toFixed(3)} mL</strong></div>`;
+  }
+}
+
+// 変更箇所：Firebaseへ送信する処理を追加
+function updateSlotAttr(idx, val) { 
+  SLOTS_DATA[idx].attr = val; 
+  syncSlotToCloud(idx);
+  recalcAll(); 
+}
+
+// 変更箇所：Firebaseへ送信する処理を追加
+function updateSlotField(idx, field, val) { 
+  SLOTS_DATA[idx][field] = val; 
+  syncSlotToCloud(idx);
+  recalcAll(); 
+}
+
+// 変更箇所：Firebaseへ送信する処理を追加
+function stampNow(idx, field) {
+  SLOTS_DATA[idx][field] = toTimeStr(getNowMinutes());
+  syncSlotToCloud(idx);
+  recalcAll();
+  if (currentModalSlot !== null) openSlotModal(currentModalSlot);
+}
+
+function setFilter(key) { activeFilter = key; renderAllViews(); }
+function switchTab(sheetKey, btn) {
+  document.querySelectorAll('.sheet-view').forEach(s => s.classList.remove('active'));
+  document.getElementById('sheet-' + sheetKey).classList.add('active');
+  document.querySelectorAll('header .nav-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function openSlotModal(slotNum) {
+  currentModalSlot = slotNum;
+  const idx = slotNum - 1;
+  const s = SLOTS_DATA[idx];
+  const meta = STEPS_META.find(m => m.key === s.currentStepKey) || STEPS_META[0];
+  const st = s.stepStates;
+
+  document.getElementById('modalTitle').innerHTML = `枠 ${s.slot} （${s.attr}） ― 現在：<span style="color:${meta.badge}">${meta.label} (${meta.dept})</span>`;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="margin-bottom:8px; display:flex; align-items:center; gap:10px;">
+      <strong>属性切替：</strong>
+      <select onchange="updateSlotAttr(${idx}, this.value); openSlotModal(${slotNum});" style="font-size:12px; padding:3px 6px; font-weight:bold;">
+        ${Object.keys(masterDurations).map(k => `<option value="${k}" ${s.attr===k?'selected':''}>${k}</option>`).join('')}
+      </select>
+      <span style="font-size:11px; color:#64748b;">※「リスケ/空き枠」を選ぶと行全体がブラックアウトします</span>
+    </div>
+
+    <div class="dept-modal-section" style="background:var(--dept-concierge-light); border-color:var(--dept-concierge-border);">
+      <span class="dept-modal-header" style="background:var(--dept-concierge-bg);">🧑‍💼 コンシェルジュ入力エリア</span>
+      <div class="modal-grid">
+        <div class="step-box" style="background:${st.recep==='done'?'var(--step-done-bg)':'#fff'};">
+          <div style="display:flex; justify-content:space-between;"><strong>① 受付開始</strong>${renderStateBadge(st.recep)}</div>
+          <span>定時: ${s.fixedRecep}</span>
+          <div class="input-stamp-row">
+            <input type="time" class="time-input input-concierge" value="${s.actualRecepStart}" onchange="updateSlotField(${idx},'actualRecepStart',this.value); openSlotModal(${slotNum});">
+            <button class="stamp-mini btn-concierge" onclick="stampNow(${idx},'actualRecepStart')">打刻</button>
+          </div>
+        </div>
+        <div class="step-box" style="background:${st.dressing==='done'?'var(--step-done-bg)':'#fff'};">
+          <div style="display:flex; justify-content:space-between;"><strong>⑧ 完了入力</strong>${renderStateBadge(st.dressing)}</div>
+          <span>更衣開始: ${s.calcDressingStart}</span>
+          <div class="input-stamp-row">
+            <input type="time" class="time-input input-concierge" value="${s.manualDressingEnd}" onchange="updateSlotField(${idx},'manualDressingEnd',this.value); openSlotModal(${slotNum});">
+            <button class="stamp-mini btn-concierge" onclick="stampNow(${idx},'manualDressingEnd')">打刻</button>
+          </div>
+        </div>
+        <div class="step-box" style="background:#fff; justify-content:center;">
+          <label style="font-weight:bold; cursor:pointer;">
+            <input type="checkbox" ${s.isForceDone?'checked':''} onchange="updateSlotField(${idx},'isForceDone',this.checked); openSlotModal(${slotNum});"> ✅ 全工程完了として確定
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="dept-modal-section" style="background:var(--dept-nurse-light); border-color:var(--dept-nurse-border);">
+      <span class="dept-modal-header" style="background:var(--dept-nurse-bg);">👩‍⚕️ 看護師入力エリア（②問診・③FDG）</span>
+      <div class="modal-grid">
+        <div class="step-box" style="background:${st.interview==='done'?'var(--step-done-bg)':'#fff'};">
+          <div style="display:flex; justify-content:space-between;"><strong>② 問診開始</strong>${renderStateBadge(st.interview)}</div>
+          <span>定時: ${s.fixedInterview}</span>
+          <div class="input-stamp-row">
+            <input type="time" class="time-input input-nurse" value="${s.manualInterviewStart}" onchange="updateSlotField(${idx},'manualInterviewStart',this.value); openSlotModal(${slotNum});">
+            <button class="stamp-mini btn-nurse" onclick="stampNow(${idx},'manualInterviewStart')">打刻</button>
+          </div>
+        </div>
+        <div class="step-box" style="background:#fce7f3; border-color:#be185d;">
+          <strong>★ FDG予定時間</strong>
+          <span style="font-size:15px; font-weight:900; color:#831843;">${s.calcFdgPlanM}</span>
+          <span style="font-size:10px;">自動逆算結果</span>
+        </div>
+        <div class="step-box" style="background:${st.fdg==='done'?'var(--step-done-bg)':'#fff'};">
+          <div style="display:flex; justify-content:space-between;"><strong>③ 投与完了</strong>${renderStateBadge(st.fdg)}</div>
+          <span>定時: ${s.fixedFdg} ／ 連動: ${s.calcFdgEnd}</span>
+          <div class="input-stamp-row">
+            <input type="time" class="time-input input-nurse" value="${s.manualFdgQ}" onchange="updateSlotField(${idx},'manualFdgQ',this.value); openSlotModal(${slotNum});">
+            <button class="stamp-mini btn-nurse" onclick="stampNow(${idx},'manualFdgQ')">打刻</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dept-modal-section" style="background:var(--dept-tech-light); border-color:var(--dept-tech-border);">
+      <span class="dept-modal-header" style="background:var(--dept-tech-bg);">🧑‍🔬 技師入力エリア（⑤BresTome・⑦全身PET/CT）</span>
+      <div class="modal-grid">
+        <div class="step-box" style="background:${st.brestome==='done'?'var(--step-done-bg)':'#fff'};">
+          <div style="display:flex; justify-content:space-between;"><strong>⑤ BresTome開始</strong>${renderStateBadge(st.brestome)}</div>
+          <span>連動予定: ${s.calcBrestomeStart}</span>
+          <div class="input-stamp-row">
+            <input type="time" class="time-input input-tech" value="${s.manualBrestomeStart}" onchange="updateSlotField(${idx},'manualBrestomeStart',this.value); openSlotModal(${slotNum});">
+            <button class="stamp-mini btn-tech" onclick="stampNow(${idx},'manualBrestomeStart')">打刻</button>
+          </div>
+        </div>
+        <div class="step-box" style="background:${st.petct==='done'?'var(--step-done-bg)':'#fff'};">
+          <div style="display:flex; justify-content:space-between;"><strong>⑦ 全身PET/CT開始</strong>${renderStateBadge(st.petct)}</div>
+          <span>連動: ${s.calcPetctStart} 〜 ${s.calcPetctEnd}</span>
+          <div class="input-stamp-row">
+            <input type="time" class="time-input input-tech" value="${s.manualPetctStart}" onchange="updateSlotField(${idx},'manualPetctStart',this.value); openSlotModal(${slotNum});">
+            <button class="stamp-mini btn-tech" onclick="stampNow(${idx},'manualPetctStart')">打刻</button>
+          </div>
+        </div>
+        <div class="step-box" style="background:#fff;">
+          <strong>📝 当日情報（備考欄）</strong>
+          <textarea id="modalNoteInput" class="note-full-input" style="height:42px;" onchange="updateSlotField(${idx},'note',this.value)"></textarea>
+        </div>
+      </div>
+    </div>
+  `;
+  const modalNote = document.getElementById('modalNoteInput');
+  if (modalNote) modalNote.value = s.note;
+  document.getElementById('slotModal').classList.add('open');
+}
+
+function closeModal() {
+  currentModalSlot = null;
+  document.getElementById('slotModal').classList.remove('open');
+}
+
+// 変更箇所：システム要件に従い alert() を廃止し、ボタンテキスト変更で通知するように改修
+function copyDailyReport(btn) {
+  const area = document.getElementById('dailyReportArea');
+  area.select();
+  document.execCommand('copy');
+  
+  if (btn) {
+    const originalText = btn.textContent;
+    btn.textContent = 'コピーしました！';
+    btn.style.background = '#15803d'; // 一時的に緑色へ
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = ''; // 元の色へ
+    }, 2000);
+  }
+}
+
+function toggleSimMode() {
+  const checked = document.getElementById('simModeToggle').checked;
+  document.getElementById('simTimeInput').style.display = checked ? 'inline-block' : 'none';
+  recalcAll();
+}
+function updateLiveClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('liveClock').textContent = `${h}:${m}:${s}`;
+  if (!document.getElementById('simModeToggle').checked && s === '00') recalcAll();
+}
+
+setInterval(updateLiveClock, 1000);
+updateLiveClock();
+recalcAll();
+</script>
+</body>
+</html>
